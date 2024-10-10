@@ -40,6 +40,12 @@ def training(model, train_dataloader, val_dataloader, optimizer, criterion, num_
             for inputs, labels in dataloader:
                 inputs = inputs.to(device)
 
+                # noise를 추가
+                noise = torch.zeros(inputs.size(0), 1, 28, 28)
+                nn.init.normal_(noise, 0, 0.1)    # 정규분포로 noise 생성
+                noise = noise.to(device)
+                noise_input = inputs + noise      # noise가 결합된 input 생성
+
                 optimizer.zero_grad()   # 가중치 초기화
 
                 if state == 'train':
@@ -48,7 +54,7 @@ def training(model, train_dataloader, val_dataloader, optimizer, criterion, num_
                     model.eval()
 
                 with torch.set_grad_enabled(state=='train'):
-                    outputs, encoded = model(inputs)
+                    outputs, encoded = model(noise_input)
                     loss = criterion(outputs, inputs)
                     
                     if state == 'train':
@@ -93,7 +99,7 @@ def main():
 
     best_model, train_loss_his, val_loss_his = training(model, train_loader, val_loader, optimizer, criterion, num_epochs, device)
 
-    model_save_path = './best_autoencoder_model.pth'
+    model_save_path = './best_noise_autoencoder_model.pth'
     torch.save(best_model.state_dict(), model_save_path)
     print(f'최적 모델이 {model_save_path}에 저장되었습니다.')
 
@@ -105,8 +111,8 @@ def main():
     plt.ylabel('loss')
     plt.legend()
     # 그래프를 파일로 저장 (예: 'training_loss.png')
-    plt.savefig('training_loss.png')
-    print("학습 손실 그래프가 'training_loss.png'에 저장되었습니다.")
+    plt.savefig('noise_training_loss.png')
+    print("학습 손실 그래프가 'noise_training_loss.png'에 저장되었습니다.")
 
 
 if __name__ == "__main__":

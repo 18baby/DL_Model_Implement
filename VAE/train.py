@@ -7,14 +7,14 @@ import torch.utils
 import torch.utils.data
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import AE_model
+import VAE_model
 import utils
 import time
 import copy
 
 
 # training 
-def training(model, train_dataloader, val_dataloader, optimizer, criterion, num_epochs, device):
+def training(model, train_dataloader, val_dataloader, optimizer, num_epochs, device):
     since = time.time()
 
     train_loss_his = []
@@ -33,8 +33,10 @@ def training(model, train_dataloader, val_dataloader, optimizer, criterion, num_
         for state in ['train', 'val']:
             if state == 'train':
                 dataloader = train_dataloader
+                model.train()
             else:
                 dataloader = val_dataloader
+                model.eval()
 
             # 배치별 학습 시작
             for inputs, labels in dataloader:
@@ -42,14 +44,9 @@ def training(model, train_dataloader, val_dataloader, optimizer, criterion, num_
 
                 optimizer.zero_grad()   # 가중치 초기화
 
-                if state == 'train':
-                    model.train()
-                else:
-                    model.eval()
-
                 with torch.set_grad_enabled(state=='train'):
-                    outputs, encoded = model(inputs)
-                    loss = criterion(outputs, inputs)
+                    outputs, mu, log_var = model(inputs)
+                    loss = utils.loss_fn(inputs, outputs, mu, log_var)
                     
                     if state == 'train':
                         loss.backward()    # backpropagation 진행
@@ -78,6 +75,7 @@ def training(model, train_dataloader, val_dataloader, optimizer, criterion, num_
 
     return model, train_loss_his, val_loss_his
 
+
 def main():
     data_path = '../Data'
     train_loader, val_loader, test_loader = utils.get_data(data_path)
@@ -87,13 +85,12 @@ def main():
 
     learning_rate = 0.0002
     num_epochs = 10
-    model = AE_model.AutoEncoder().to(device)
+    model = VAE_model.VariationalAutoEncoder().to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    criterion = nn.MSELoss()
 
-    best_model, train_loss_his, val_loss_his = training(model, train_loader, val_loader, optimizer, criterion, num_epochs, device)
+    best_model, train_loss_his, val_loss_his = training(model, train_loader, val_loader, optimizer, num_epochs, device)
 
-    model_save_path = './best_autoencoder_model.pth'
+    model_save_path = './best_VAE_model.pth'
     torch.save(best_model.state_dict(), model_save_path)
     print(f'최적 모델이 {model_save_path}에 저장되었습니다.')
 
@@ -105,8 +102,8 @@ def main():
     plt.ylabel('loss')
     plt.legend()
     # 그래프를 파일로 저장 (예: 'training_loss.png')
-    plt.savefig('training_loss.png')
-    print("학습 손실 그래프가 'training_loss.png'에 저장되었습니다.")
+    plt.savefig('vae_training_loss.png')
+    print("학습 손실 그래프가 'vae_training_loss.png'에 저장되었습니다.")
 
 
 if __name__ == "__main__":

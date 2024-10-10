@@ -20,7 +20,7 @@ def test():
 
     # train된 모델 불러오기
     model = AE_model.AutoEncoder().to(device)
-    best_model_path = './best_autoencoder_model.pth'
+    best_model_path = './best_noise_autoencoder_model.pth'
     model.load_state_dict(torch.load(best_model_path, weights_only=True))
 
     loss_fun = nn.MSELoss()
@@ -30,8 +30,12 @@ def test():
         running_loss = 0.0
         for inputs, labels in test_loader:
             inputs = inputs.to(device)
+            noise = nn.init.normal_(torch.FloatTensor(inputs.size(0), 1, 28, 28), 0, 0.1)
+            noise = noise.to(device)
+            inputs = inputs.to(device)
+            noise_inputs = inputs + noise
 
-            outputs, encoded = model(inputs)
+            outputs, encoded = model(noise_inputs)
             test_loss = loss_fun(inputs, outputs)
 
             running_loss += test_loss.item() * inputs.size(0)
@@ -44,8 +48,8 @@ def test():
 
     fig, axes = plt.subplots(8, 2, figsize=(8, 10))  # 5개의 이미지, 각 이미지 쌍을 저장
     for i in range(8):
-        # 원본 이미지 (왼쪽)
-        axes[i, 0].imshow(torch.squeeze(inputs[i]).cpu().numpy(), cmap='gray')
+        # noise 원본 이미지 (왼쪽)
+        axes[i, 0].imshow(torch.squeeze(noise_inputs[i]).cpu().numpy(), cmap='gray')
         axes[i, 0].set_title("Original")
         axes[i, 0].axis('off')
 
@@ -55,8 +59,8 @@ def test():
         axes[i, 1].axis('off')
     
     plt.tight_layout()
-    plt.savefig('compare_test_img.png')
-    print("비교 결과 이미지가 'compare_test_img.png'로 저장되었습니다.")
+    plt.savefig('compare_noise_test_img.png')
+    print("비교 결과 이미지가 'compare_noise_test_img.png'로 저장되었습니다.")
 
 
 test()
